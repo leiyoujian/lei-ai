@@ -1426,6 +1426,28 @@ def __find_all_provinces_city_b(val, org_city, org_province, city_maps):
     return ns_list
 
 
+# # 分支机构加权
+def __ns_branch_weighted(val, ns_list):
+    if not ns_list or len(ns_list) == 1:
+        return ns_list
+    # 分支机构标记位置
+    branch_index = -1
+    for w_key in CITY_WEIGHTED_KEYWORD:
+        if w_key in val:
+            w_key_index = val.index(w_key)
+            if w_key_index > branch_index:
+                branch_index = w_key_index
+    if branch_index == -1:
+        return ns_list
+
+    for ns in ns_list:
+        ns_word = ns.get("ns")
+        if ns_word in val:
+            distance_word = abs(branch_index - val.index(ns_word))
+            # 曲线函数由艾立同学提供，最终解释权归艾立同学 6 / (distance_word + 1) * math.cos(distance_word / (distance_word + 1))
+            ns["score"] = round(ns["score"] * (6 / (distance_word + 1) * math.cos(distance_word / (distance_word + 1))),2)
+
+    return ns_list
 
 # 计算城市信息
 def compute_city(item_iter, model, city_map):
@@ -1442,7 +1464,8 @@ def compute_city(item_iter, model, city_map):
         else:
             ns_list = __find_all_provinces_city_b(item_iter.get(field_item), item_iter.get("city"),
                                                   item_iter.get("province"), city_map)
-
+        if field_item == "company_name":
+            ns_list = __ns_branch_weighted(item_iter.get(field_item), ns_list)
         if ns_list:
             for ns in ns_list:
                 # print("ns:", ns)
